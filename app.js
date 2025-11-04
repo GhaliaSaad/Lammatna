@@ -290,7 +290,9 @@ function handleProfile() {
 /* -----------------------
    Create / Edit gatherings
    ----------------------- */
-// Update the handleCreateEdit function to work with maps
+/* -----------------------
+   Create / Edit gatherings - UPDATED
+   ----------------------- */
 function handleCreateEdit() {
   const form = el('createForm');
   if (!form) return;
@@ -315,7 +317,17 @@ function handleCreateEdit() {
         .slice(0, 16);
       el('g-date').value = localDate;
       
-      el('g-location').value = gathering.location;
+      // Set location text
+      el('g-location-text').value = gathering.location;
+      
+      // Set map toggle and coordinates if available
+      if (gathering.locationData && gathering.locationData.lat && gathering.locationData.lng) {
+        el('useMapToggle').checked = true;
+        el('map-container').style.display = 'block';
+        el('g-location-lat').value = gathering.locationData.lat;
+        el('g-location-lng').value = gathering.locationData.lng;
+      }
+      
       el('g-reminder').value = gathering.reminder || 'none';
       
       el('cancelEdit').style.display = 'inline-block';
@@ -326,24 +338,31 @@ function handleCreateEdit() {
   form.onsubmit = (e) => {
     e.preventDefault();
     
+    // Get location from text input OR map
+    const locationText = el('g-location-text').value.trim();
+    const useMap = el('useMapToggle').checked;
+    const locationLat = el('g-location-lat').value;
+    const locationLng = el('g-location-lng').value;
+    
     const formData = {
       name: el('g-name').value.trim(),
       category: el('g-category').value,
       date: el('g-date').value,
-      location: el('g-location').value,
+      location: locationText, // استخدام النص المكتوب يدوياً
       reminder: el('g-reminder').value,
-      locationLat: el('g-location-lat').value,
-      locationLng: el('g-location-lng').value
+      locationLat: useMap ? locationLat : null,
+      locationLng: useMap ? locationLng : null
     };
 
-    // Validation
+    // Validation - الموقع النصي مطلوب دائماً
     if (!formData.name || !formData.category || !formData.date || !formData.location) {
       showNotif('يرجى ملء جميع الحقول المطلوبة');
       return;
     }
 
-    if (!formData.locationLat || !formData.locationLng) {
-      showNotif('يرجى اختيار موقع من الخريطة');
+    // إذا تم استخدام الخريطة، نتحقق من الإحداثيات
+    if (useMap && (!formData.locationLat || !formData.locationLng)) {
+      showNotif('يرجى اختيار موقع من الخريطة أو إلغاء تفعيلها');
       return;
     }
 
@@ -356,11 +375,11 @@ function handleCreateEdit() {
         gatherings[index] = {
           ...gatherings[index],
           ...formData,
-          locationData: {
+          locationData: useMap ? {
             address: formData.location,
             lat: formData.locationLat,
             lng: formData.locationLng
-          }
+          } : null
         };
         saveJSON(STORAGE.GATHERINGS, gatherings);
         showNotif('تم تعديل الفعالية بنجاح');
@@ -377,11 +396,11 @@ function handleCreateEdit() {
         tasks: [],
         shareableLink: `${location.origin}/gatherings.html?joincode=${genCode()}`,
         ...formData,
-        locationData: {
+        locationData: useMap ? {
           address: formData.location,
           lat: formData.locationLat,
           lng: formData.locationLng
-        }
+        } : null
       };
       
       gatherings.push(newGathering);
@@ -928,4 +947,4 @@ function addSampleUserLogin() {
 const navLogout = el('nav-logout') || document.querySelector('#nav-logout');
 const navRegister = document.getElementById('nav-register');
 
-// FIX: Remove refe
+// FIX: Remove references to non-existent elements or add them to HTML
